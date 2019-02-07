@@ -1,31 +1,98 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2027
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FastFourierTransform", "FastFourierTransform\FastFourierTransform.vcxproj", "{B6EAC166-0F41-41A5-8557-E06623ABA82A}"
-EndProject
-Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B6EAC166-0F41-41A5-8557-E06623ABA82A}.Debug|x64.ActiveCfg = Debug|x64
-		{B6EAC166-0F41-41A5-8557-E06623ABA82A}.Debug|x64.Build.0 = Debug|x64
-		{B6EAC166-0F41-41A5-8557-E06623ABA82A}.Debug|x86.ActiveCfg = Debug|Win32
-		{B6EAC166-0F41-41A5-8557-E06623ABA82A}.Debug|x86.Build.0 = Debug|Win32
-		{B6EAC166-0F41-41A5-8557-E06623ABA82A}.Release|x64.ActiveCfg = Release|x64
-		{B6EAC166-0F41-41A5-8557-E06623ABA82A}.Release|x64.Build.0 = Release|x64
-		{B6EAC166-0F41-41A5-8557-E06623ABA82A}.Release|x86.ActiveCfg = Release|Win32
-		{B6EAC166-0F41-41A5-8557-E06623ABA82A}.Release|x86.Build.0 = Release|Win32
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {A12C6A16-B733-46E3-9BA8-EA2EEB1D3A8A}
-	EndGlobalSection
-EndGlobal
+// FastFourierTransform.cpp : Defines the entry point for the console application.
+//
+// FFT.cpp : Defines the entry point for the console application.
+//
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#define pi 3.14
+#define length_of_signal 1024
+
+double sum[2* length_of_signal];
+
+double * fft(double *a, int N, int length_FFT)
+{
+	 
+	double e[length_of_signal/2], o[length_of_signal/2];
+	double *x1, *x2;
+	double result[2 * length_of_signal], x1_real[2 * length_of_signal], x1_imag[length_of_signal], x2_real[length_of_signal], x2_imag[length_of_signal];
+	int k, h; 
+	if (N == 2)
+	{
+		k = 0;
+		for (int j = 0; j < 2 * length_FFT; j = j + 2)
+		{
+			sum[j] = ((*a)) + ((*(a + 1)) * cos(2 * pi * k / N));
+			sum[j + 1] = -((*(a + 1)) * sin(2 * pi * k / N));
+			k++;
+		}
+		return(&sum[0]);
+	}
+
+
+	for (int i = 0; i < N / 2; i++)
+	{
+		e[i] = *(a + 2 * i);
+	}
+
+	for (int i = 0; i < N / 2; i++)
+	{
+		o[i] = *(a + (2 * i + 1));
+	}
+
+	x1 = fft(&e[0], N / 2, length_FFT);
+	k = 0;
+
+	for (int j = 0; j < 2 * length_FFT; j = j + 2)
+	{
+		x1_real[k] = *(x1 + j); x1_imag[k] = *(x1 + 1 + j); k++;
+	}
+
+	x2 = fft(&o[0], N / 2, length_FFT);
+	k = 0; h = 0;
+	for (int j = 0; j < 2 * length_FFT; j = j + 2)
+	{
+		x2_real[k] = cos(2 * pi * k / N)* (*(x2 + j)) + sin(2 * pi * k / N) * (*(x2 + 1 + j));
+		x2_imag[k] = cos(2 * pi * k / N)* (*(x2 + j + 1)) - sin(2 * pi * k / N) * (*(x2 + j));
+
+		x2_real[k] = x1_real[k] + x2_real[k];
+		x2_imag[k] = x1_imag[k] + x2_imag[k];
+
+		result[h] = x2_real[k];
+		result[h + 1] = x2_imag[k];
+		k++; h = h + 2;
+	}
+	return(&result[0]);
+}
+
+int main()
+{
+	double a[length_of_signal], mag[length_of_signal];
+	double *result; 
+	int i, k, f, fs, length_FFT, N;
+	FILE *fp; 
+	f = 1000;
+	fs = 3000;
+	N = length_of_signal;
+	length_FFT = N;
+	for (i = 0; i < N; i++)
+	{
+		a[i] = sin(2 * pi*f / fs * i);
+	}
+	result = fft(&a[0], N, length_FFT);
+	
+	fopen_s(&fp, "Result.csv", "w");
+
+	k = 0;
+	for (i = 0; i < 2 * N; i = i + 2)
+	{
+		mag[k] = pow(*(result + i), 2) + pow(*(result + i + 1), 2);
+		fprintf(fp, "%lf\n", mag[k]);
+		k++;
+	}
+	fclose(fp);
+	printf("done");
+	getchar();
+	return 0;
+}
